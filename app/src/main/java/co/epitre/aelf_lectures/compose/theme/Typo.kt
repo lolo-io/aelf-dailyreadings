@@ -13,6 +13,11 @@ object Typo {
         fontSize = 15.sp,
     )
 
+    val bodyFavorite = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 15.sp,
+    )
 
     val verse = TextStyle(
         fontFamily = FontFamily.Default,

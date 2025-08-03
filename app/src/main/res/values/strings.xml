@@ -77,6 +77,7 @@
     <!-- Search engine -->
     <string name="bible_search_hint">Rechercher un passage de la Bible</string>
     <string name="bible_search_title">Rechercher</string>
+    <string name="bible_favorite_verses">Versets favoris</string>
 
     <!-- Shortcuts -->
     <string name="shortcut_mass_label">Messe du jour</string>

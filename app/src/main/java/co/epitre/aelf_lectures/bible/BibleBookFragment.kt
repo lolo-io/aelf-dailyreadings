@@ -108,24 +108,25 @@ class BibleBookFragment private constructor() : BibleFragment() {
                             viewmodel.bookTitle
 
                         BibleBookFragmentScreenContent(
-                            chapters = viewmodel.chapters,
-                            selectedChapterIndex = selectedChapterIndex,
-                            setSelectedChapterIndex = {
-                                viewmodel.setSelectedChapterIndex(it)
-                            },
-                            verses = {
-                                viewmodel.getChapterVerses(it)
-                            },
-                            chapter = {
-                                viewmodel.getChapterAt(it)
-                            },
-                            zoom = zoom,
-                            searchQuery = arguments?.getString(BIBLE_SEARCH_QUERY),
-                            lectureRefs = arguments?.getString(BIBLE_REFERENCE)?.let {
-                                Utils.getLectureReferences(it)
-                            },
-                            onPinchToZoom = { pZoom ->
-                                zoom = (zoom * pZoom).coerceIn(1f, 7f)
+                            bookRef = viewmodel.bookRef,
+                        chapters = viewmodel.chapters,
+                        selectedChapterIndex = selectedChapterIndex,
+                        setSelectedChapterIndex = {
+                            viewmodel.setSelectedChapterIndex(it)
+                        },
+                        verses = {
+                            viewmodel.getChapterVerses(it)
+                        },
+                        chapter = {
+                            viewmodel.getChapterAt(it)
+                        },
+                        zoom = zoom,
+                        searchQuery = arguments?.getString(BIBLE_SEARCH_QUERY),
+                        lectureRefs = arguments?.getString(BIBLE_REFERENCE)?.let {
+                            Utils.getLectureReferences(it)
+                        },
+                        onPinchToZoom = { pZoom ->
+                            zoom = (zoom * pZoom).coerceIn(1f, 7f)
 
                                 preferences.edit {
                                     putInt(

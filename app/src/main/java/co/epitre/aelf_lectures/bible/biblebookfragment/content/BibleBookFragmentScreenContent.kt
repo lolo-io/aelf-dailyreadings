@@ -1,5 +1,6 @@
 package co.epitre.aelf_lectures.bible.biblebookfragment.content
 
+import android.widget.Toast
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
@@ -54,6 +55,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -85,12 +87,16 @@ fun BibleBookFragmentScreenContent(
     verses: suspend (chapterIndex: Int) -> List<BibleVerse>,
     chapter: (chapterIndex: Int) -> BibleBookChapter,
     modifier: Modifier = Modifier,
+    bookRef: String = "",
     zoom: Float = 1f,
     searchQuery: String? = null,
     lectureRefs: List<LectureReference>? = null,
     onPinchToZoom: (Float) -> Unit = {}
 ) {
 
+    val context = LocalContext.current
+
+    var tempLocalFavorites by remember { mutableStateOf(listOf<BibleVerse>()) }
 
     val scrollToRef = lectureRefs?.firstOrNull()?.verseStart
     val highlightChapter = lectureRefs?.firstOrNull()?.chapter
@@ -206,8 +212,6 @@ fun BibleBookFragmentScreenContent(
                 }
 
                 val coroutineScope = rememberCoroutineScope()
-
-
                 val flingBehavior: FlingBehavior = ScrollableDefaults.flingBehavior()
 
 
@@ -303,8 +307,8 @@ fun BibleBookFragmentScreenContent(
                                     )
                                     Space(spacing.s100)
                                 }
-
                             }
+
                             displayedVerses[pagerIndex]?.forEachIndexed { i, it ->
 
                                 item {
@@ -320,12 +324,32 @@ fun BibleBookFragmentScreenContent(
                                             chapters[pagerIndex].chapterRef,
                                             it.ref,
                                         ),
+                                        isFavorite = tempLocalFavorites.contains(it),
                                         onClick = {
                                             val toFocus = selectedChapterIndex to i
                                             if (focusedVerse != toFocus) {
                                                 focusedVerse = toFocus
                                             } else {
                                                 focusedVerse = null
+                                            }
+                                        },
+                                        onDoubleClick = {
+                                            tempLocalFavorites = if (tempLocalFavorites.contains(it)) {
+                                                Toast.makeText(
+                                                    context,
+                                                    "$bookRef ${chapters[selectedChapterIndex].chapterRef}:${it.ref} a été retiré de vos versets favoris",
+                                                    Toast.LENGTH_LONG
+                                                ).show()
+                                                focusedVerse = null
+                                                tempLocalFavorites - it
+                                            } else {
+                                                Toast.makeText(
+                                                    context,
+                                                    "$bookRef ${chapters[selectedChapterIndex].chapterRef}:${it.ref} a été ajouté à vos versets favoris",
+                                                    Toast.LENGTH_LONG
+                                                ).show()
+                                                focusedVerse = selectedChapterIndex to i
+                                                tempLocalFavorites + it
                                             }
                                         })
                                 }
