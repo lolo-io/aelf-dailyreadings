@@ -2,6 +2,7 @@ package co.epitre.aelf_lectures.bible.biblebookfragment.components
 
 import android.os.SystemClock
 import android.view.MotionEvent
+import android.view.ViewConfiguration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -19,14 +20,17 @@ import androidx.compose.foundation.text.selection.DisableSelection
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -52,11 +56,11 @@ fun BibleVerseComponent(
     onClick: () -> Unit = {},
     onDoubleClick: () -> Unit = {}
 ) {
-    val viewConfiguration = androidx.compose.ui.platform.LocalViewConfiguration.current
-    val doubleTapTimeout = android.view.ViewConfiguration.getDoubleTapTimeout()
+    val viewConfiguration = LocalViewConfiguration.current
+    val doubleTapTimeout = ViewConfiguration.getDoubleTapTimeout() * 2
     val touchSlop = viewConfiguration.touchSlop
     var lastTapTime by remember { mutableLongStateOf(0L) }
-    var lastTapPos by remember { androidx.compose.runtime.mutableStateOf<androidx.compose.ui.geometry.Offset?>(null) }
+    var lastTapPos by remember { mutableStateOf<Offset?>(null) }
 
     Column(
         modifier
@@ -81,8 +85,8 @@ fun BibleVerseComponent(
                     if (isTap) {
                         val now = System.currentTimeMillis()
                         if (lastTapTime != 0L &&
-                            now - lastTapTime < doubleTapTimeout &&
-                            lastTapPos?.let { (it - downPos).getDistance() < touchSlop } == true
+                            now - lastTapTime < doubleTapTimeout
+                            // && lastTapPos?.let { (it - downPos).getDistance() < touchSlop } == true
                         ) {
                             onDoubleClick()
                             lastTapTime = 0L
