@@ -204,6 +204,8 @@ public class SectionBibleFragment extends SectionFragment {
 
         if (itemId == R.id.action_share) {
             return onShare();
+        } else if (itemId == R.id.action_favorites) {
+            return onClickFavorites();
         } else {
             return super.onOptionsItemSelected(item);
         }
@@ -319,6 +321,12 @@ public class SectionBibleFragment extends SectionFragment {
     @Subscribe
     public void onBibleEntryClick(BibleBookListAdapter.OnBibleEntryClickEvent event) {
         openBook(event.mBiblePartId, event.mBibleBookId);
+    }
+
+
+    public boolean onClickFavorites() {
+        setFragment(new BibleFavoritesFragment());
+        return true;
     }
 
     public boolean onShare() {

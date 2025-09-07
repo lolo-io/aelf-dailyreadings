@@ -96,6 +96,9 @@ dependencies {
     // Sqlite
     implementation project(path: ':sqlite3')
 
+    // Gson
+    implementation "com.google.code.gson:gson:2.13.1"
+
     // ** AUTOMATED TEST **
     testImplementation platform('org.junit:junit-bom:5.10.2')
     testImplementation 'org.junit.jupiter:junit-jupiter'

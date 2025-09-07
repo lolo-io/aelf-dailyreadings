@@ -1,5 +1,6 @@
 package co.epitre.aelf_lectures.bible.biblebookfragment.content
 
+import android.content.Context
 import android.widget.Toast
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
@@ -59,10 +60,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.preference.PreferenceManager
 import co.epitre.aelf_lectures.bible.biblebookfragment.components.BibleVerseComponent
 import co.epitre.aelf_lectures.bible.biblebookfragment.components.TextWithZoom
 import co.epitre.aelf_lectures.bible.biblebookfragment.components.previewBibleVerse
 import co.epitre.aelf_lectures.bible.data.BibleBookChapter
+import co.epitre.aelf_lectures.bible.data.BibleFavoriteVerse
 import co.epitre.aelf_lectures.bible.data.BibleVerse
 import co.epitre.aelf_lectures.bible.data.LectureReference
 import co.epitre.aelf_lectures.compose.theme.Typo
@@ -71,13 +74,18 @@ import co.epitre.aelf_lectures.compose.theme.spacing
 import co.epitre.aelf_lectures.compose.utils.Space
 import co.epitre.aelf_lectures.compose.utils.customDetectTransformGestures
 import co.epitre.aelf_lectures.compose.utils.pxToDp
+import co.epitre.aelf_lectures.settings.SettingsActivity
 import co.epitre.aelf_lectures.utils.Utils.containsVerse
 import co.epitre.aelf_lectures.utils.Utils.safeToInt
 import co.epitre.aelf_lectures.utils.round
+import com.squareup.moshi.Json
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+
+import com.google.gson.Gson
+import androidx.core.content.edit
 
 @Composable
 fun BibleBookFragmentScreenContent(
@@ -309,9 +317,13 @@ fun BibleBookFragmentScreenContent(
                                 }
                             }
 
+
+
                             displayedVerses[pagerIndex]?.forEachIndexed { i, it ->
 
                                 item {
+                                    val context = LocalContext.current
+
                                     val chapterRef = chapters[pagerIndex].chapterRef
                                     BibleVerseComponent(
                                         ref = it.ref,
@@ -334,23 +346,36 @@ fun BibleBookFragmentScreenContent(
                                             }
                                         },
                                         onDoubleClick = {
-                                            tempLocalFavorites = if (tempLocalFavorites.contains(it)) {
-                                                Toast.makeText(
-                                                    context,
-                                                    "$bookRef ${chapters[selectedChapterIndex].chapterRef}:${it.ref} a été retiré de vos versets favoris",
-                                                    Toast.LENGTH_LONG
-                                                ).show()
-                                                focusedVerse = null
-                                                tempLocalFavorites - it
-                                            } else {
-                                                Toast.makeText(
-                                                    context,
-                                                    "$bookRef ${chapters[selectedChapterIndex].chapterRef}:${it.ref} a été ajouté à vos versets favoris",
-                                                    Toast.LENGTH_LONG
-                                                ).show()
-                                                focusedVerse = selectedChapterIndex to i
-                                                tempLocalFavorites + it
-                                            }
+                                            tempLocalFavorites =
+                                                if (tempLocalFavorites.contains(it)) {
+                                                    Toast.makeText(
+                                                        context,
+                                                        "$bookRef ${chapters[selectedChapterIndex].chapterRef}:${it.ref} a été retiré de vos versets favoris",
+                                                        Toast.LENGTH_LONG
+                                                    ).show()
+                                                    focusedVerse = null
+                                                    tempLocalFavorites - it
+                                                } else {
+                                                    Toast.makeText(
+                                                        context,
+                                                        "$bookRef ${chapters[selectedChapterIndex].chapterRef}:${it.ref} a été ajouté à vos versets favoris",
+                                                        Toast.LENGTH_LONG
+                                                    ).show()
+                                                    focusedVerse = selectedChapterIndex to i
+
+
+                                                    addVerseToFavorites(
+                                                        applicationContext = context.applicationContext,
+                                                        bookRef = bookRef,
+                                                        chapterRef = chapterRef,
+                                                        verseRef = it.ref,
+                                                        text = it.text
+                                                    )
+
+                                                    tempLocalFavorites + it
+
+
+                                                }
                                         })
                                 }
                             }
@@ -436,4 +461,35 @@ fun PreviewBibleBookFragmentScreenContent() {
         chapter = {
             BibleBookChapter("Gn", it.toString(), "Chapitre ${it + 1}")
         })
+}
+
+
+fun addVerseToFavorites(
+    applicationContext: Context,
+    bookRef: String,
+    chapterRef: String,
+    verseRef: String,
+    text: String
+) {
+
+    val settings =
+        PreferenceManager.getDefaultSharedPreferences(
+            applicationContext
+        )
+
+    val gson = Gson()
+
+    val json = gson.toJson(
+        listOf(
+            BibleFavoriteVerse(
+                bookRef = bookRef,
+                chapterRef = chapterRef,
+                verseRef = verseRef,
+                text = text
+            )
+        )
+    )
+    settings.edit { putString(SettingsActivity.KEY_FAVORITE_VERSES, json) }
+
+
 }

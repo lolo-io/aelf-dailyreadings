@@ -36,6 +36,7 @@ public class SettingsActivity extends BaseActivity {
     public static final String KEY_APP_SYNC_LAST_SUCCESS = "app_sync_last_success";
     public static final String KEY_APP_VERSION = "version";
     public static final String KEY_BIBLE_LAST_PAGE = "bible_last_page";
+    public static final String KEY_FAVORITE_VERSES = "bible_favorite_verses";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,7 +62,7 @@ public class SettingsActivity extends BaseActivity {
         try {
             super.startActivity(intent, options);
         } catch (ActivityNotFoundException e) {
-            Log.e(TAG, "Failed to launch intent "+intent.toString()+": "+e);
+            Log.e(TAG, "Failed to launch intent " + intent.toString() + ": " + e);
             Toast.makeText(this, "Impossible de lancer l'action demandée", Toast.LENGTH_SHORT).show();
         }
     }
