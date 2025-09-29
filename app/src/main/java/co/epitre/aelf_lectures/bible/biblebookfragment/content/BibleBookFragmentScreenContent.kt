@@ -41,6 +41,7 @@ import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -60,6 +61,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.content.edit
 import androidx.preference.PreferenceManager
 import co.epitre.aelf_lectures.bible.biblebookfragment.components.BibleVerseComponent
 import co.epitre.aelf_lectures.bible.biblebookfragment.components.TextWithZoom
@@ -78,14 +80,17 @@ import co.epitre.aelf_lectures.settings.SettingsActivity
 import co.epitre.aelf_lectures.utils.Utils.containsVerse
 import co.epitre.aelf_lectures.utils.Utils.safeToInt
 import co.epitre.aelf_lectures.utils.round
-import com.squareup.moshi.Json
+import co.epitre.aelf_lectures.utils.stringFlow
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
-import com.google.gson.Gson
-import androidx.core.content.edit
+
+private val gson = Gson()
 
 @Composable
 fun BibleBookFragmentScreenContent(
@@ -104,7 +109,16 @@ fun BibleBookFragmentScreenContent(
 
     val context = LocalContext.current
 
-    var tempLocalFavorites by remember { mutableStateOf(listOf<BibleVerse>()) }
+    val prefs = remember {
+        PreferenceManager.getDefaultSharedPreferences(
+            context.applicationContext
+        )
+    }
+
+    val favoriteVerses by prefs.stringFlow(SettingsActivity.KEY_FAVORITE_VERSES, "[]")
+        .map<String, List<BibleFavoriteVerse>> {
+            gson.fromJson(it, object : TypeToken<List<BibleFavoriteVerse>>() {}.type)
+        }.collectAsState(initial = emptyList())
 
     val scrollToRef = lectureRefs?.firstOrNull()?.verseStart
     val highlightChapter = lectureRefs?.firstOrNull()?.chapter
@@ -336,7 +350,11 @@ fun BibleBookFragmentScreenContent(
                                             chapters[pagerIndex].chapterRef,
                                             it.ref,
                                         ),
-                                        isFavorite = tempLocalFavorites.contains(it),
+                                        isFavorite = favoriteVerses.any { fav ->
+                                            fav.bookRef == bookRef &&
+                                                    fav.chapterRef == chapterRef &&
+                                                    fav.verseRef == it.ref
+                                        },
                                         onClick = {
                                             val toFocus = selectedChapterIndex to i
                                             if (focusedVerse != toFocus) {
@@ -346,36 +364,48 @@ fun BibleBookFragmentScreenContent(
                                             }
                                         },
                                         onDoubleClick = {
-                                            tempLocalFavorites =
-                                                if (tempLocalFavorites.contains(it)) {
-                                                    Toast.makeText(
-                                                        context,
-                                                        "$bookRef ${chapters[selectedChapterIndex].chapterRef}:${it.ref} a été retiré de vos versets favoris",
-                                                        Toast.LENGTH_LONG
-                                                    ).show()
-                                                    focusedVerse = null
-                                                    tempLocalFavorites - it
-                                                } else {
-                                                    Toast.makeText(
-                                                        context,
-                                                        "$bookRef ${chapters[selectedChapterIndex].chapterRef}:${it.ref} a été ajouté à vos versets favoris",
-                                                        Toast.LENGTH_LONG
-                                                    ).show()
-                                                    focusedVerse = selectedChapterIndex to i
+                                            if (favoriteVerses.any { fav ->
+                                                    fav.bookRef == bookRef &&
+                                                            fav.chapterRef == chapterRef &&
+                                                            fav.verseRef == it.ref
+                                                }) {
+                                                Toast.makeText(
+                                                    context,
+                                                    "$bookRef ${chapters[selectedChapterIndex].chapterRef}:${it.ref} a été retiré de vos versets favoris",
+                                                    Toast.LENGTH_LONG
+                                                ).show()
+
+                                                removeVerseFromFavorites(
+                                                    applicationContext = context.applicationContext,
+                                                    bookRef = bookRef,
+                                                    chapterRef = chapterRef,
+                                                    verseRef = it.ref,
+                                                    text = it.text
+                                                )
+
+                                                focusedVerse = null
+                                                favoriteVerses - it
+
+                                            } else {
+                                                Toast.makeText(
+                                                    context,
+                                                    "$bookRef ${chapters[selectedChapterIndex].chapterRef}:${it.ref} a été ajouté à vos versets favoris",
+                                                    Toast.LENGTH_LONG
+                                                ).show()
+                                                focusedVerse = selectedChapterIndex to i
+
+                                                addVerseToFavorites(
+                                                    applicationContext = context.applicationContext,
+                                                    bookRef = bookRef,
+                                                    chapterRef = chapterRef,
+                                                    verseRef = it.ref,
+                                                    text = it.text
+                                                )
+
+                                                favoriteVerses + it
 
 
-                                                    addVerseToFavorites(
-                                                        applicationContext = context.applicationContext,
-                                                        bookRef = bookRef,
-                                                        chapterRef = chapterRef,
-                                                        verseRef = it.ref,
-                                                        text = it.text
-                                                    )
-
-                                                    tempLocalFavorites + it
-
-
-                                                }
+                                            }
                                         })
                                 }
                             }
@@ -477,9 +507,13 @@ fun addVerseToFavorites(
             applicationContext
         )
 
-    val gson = Gson()
 
-    val json = gson.toJson(
+    val favorites: List<BibleFavoriteVerse> =
+        settings.getString(SettingsActivity.KEY_FAVORITE_VERSES, "[]").let {
+            gson.fromJson(it, object : TypeToken<List<BibleFavoriteVerse>>() {}.type)
+        }
+
+    val newFavorites = gson.toJson(
         listOf(
             BibleFavoriteVerse(
                 bookRef = bookRef,
@@ -487,9 +521,40 @@ fun addVerseToFavorites(
                 verseRef = verseRef,
                 text = text
             )
-        )
+        ) + favorites
     )
-    settings.edit { putString(SettingsActivity.KEY_FAVORITE_VERSES, json) }
+    settings.edit { putString(SettingsActivity.KEY_FAVORITE_VERSES, newFavorites) }
+}
 
 
+fun removeVerseFromFavorites(
+    applicationContext: Context,
+    bookRef: String,
+    chapterRef: String,
+    verseRef: String,
+    text: String
+) {
+
+    val settings =
+        PreferenceManager.getDefaultSharedPreferences(
+            applicationContext
+        )
+
+
+    val favorites: List<BibleFavoriteVerse> =
+        settings.getString(SettingsActivity.KEY_FAVORITE_VERSES, "[]").let {
+            gson.fromJson(it, object : TypeToken<List<BibleFavoriteVerse>>() {}.type)
+        }
+
+    val newFavorites = gson.toJson(
+        favorites.filter {
+            it != BibleFavoriteVerse(
+                bookRef = bookRef,
+                chapterRef = chapterRef,
+                verseRef = verseRef,
+                text = text
+            )
+        }
+    )
+    settings.edit { putString(SettingsActivity.KEY_FAVORITE_VERSES, newFavorites) }
 }
